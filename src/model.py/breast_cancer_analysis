@@ -1,0 +1,108 @@
+"""
+Breast Cancer Clinical Decision Support Model
+Author: Your Name
+Description: Interpretable logistic regression model for cancer screening
+"""
+## Load Libraries and Dataset
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from sklearn.datasets import load_breast_cancer
+from sklearn.metrics import (
+    confusion_matrix,
+    classification_report,
+    roc_auc_score,
+    roc_curve
+)
+
+import statsmodels.api as sm
+# Load dataset
+data = load_breast_cancer()
+df = pd.DataFrame(data.data, columns=data.feature_names)
+
+# Original target: 0 = malignant, 1 = benign
+df['diagnosis'] = data.target
+
+# Recode for intuitive interpretation: 1 = malignant, 0 = benign
+df['malignant'] = df['diagnosis'].apply(lambda x: 0 if x == 1 else 1)
+
+df.head()
+# Descriptive Statistics
+df[['mean radius', 'mean texture', 'mean perimeter', 'mean smoothness']].describe()
+# Correlation Analysis (Clean & Interpretable)
+plt.figure(figsize=(9, 6))
+sns.heatmap(
+    df[['mean radius', 'mean texture', 'mean perimeter', 
+        'mean smoothness', 'malignant']].corr(),
+    annot=True,
+    fmt=".2f",
+    cmap="coolwarm",
+    linewidths=0.5
+)
+plt.title("Correlation Matrix of Key Tumor Features")
+plt.tight_layout()
+plt.show()
+# Logistic Regression (Interpretability First)
+# Feature selection based on clinical relevance
+X = df[['mean radius', 'mean texture', 'mean smoothness']]
+X = sm.add_constant(X)
+y = df['malignant']
+
+model = sm.Logit(y, X)
+result = model.fit()
+
+result.summary()
+# Odds Ratios (Clinical Interpretation)
+odds_ratios = np.exp(result.params)
+odds_ratios
+# Predicted probabilities & Classification
+df['predicted_prob'] = result.predict(X)
+
+# Default classification threshold = 0.5
+df['predicted_class'] = (df['predicted_prob'] >= 0.5).astype(int)
+# Confusion Matrix (Clinical Risk Trade-offs)
+cm = confusion_matrix(y, df['predicted_class'])
+
+plt.figure(figsize=(6, 4))
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=["Predicted Benign", "Predicted Malignant"],
+    yticklabels=["Actual Benign", "Actual Malignant"]
+)
+plt.title("Confusion Matrix")
+plt.ylabel("Actual")
+plt.xlabel("Predicted")
+plt.tight_layout()
+plt.show()
+# Precision vs Recall (Clinical Framing)
+print(classification_report(
+    y,
+    df['predicted_class'],
+    target_names=["Benign", "Malignant"]
+))
+# ROC Curve & AUC (Overall Model Performance)
+auc = roc_auc_score(y, df['predicted_prob'])
+
+fpr, tpr, thresholds = roc_curve(y, df['predicted_prob'])
+
+plt.figure(figsize=(7, 5))
+plt.plot(fpr, tpr, label=f"AUC = {auc:.3f}")
+plt.plot([0, 1], [0, 1], linestyle="--")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate (Recall)")
+plt.title("ROC Curve – Breast Cancer Prediction Model")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+auc
+# Penalized logistic regression to mitigate quasi-separation
+penalized_model = sm.Logit(y, X)
+penalized_result = penalized_model.fit_regularized(method='l1', alpha=0.1)
+
+penalized_result.params
