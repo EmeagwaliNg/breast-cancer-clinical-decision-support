@@ -98,8 +98,4 @@ This model is intended for **decision support only** and does not replace profes
 ```bash
 pip install -r requirements.txt
 
----
-
-## How to Run
-```bash
-pip install -r requirements.txt
+jupyter notebook notebooks/breast_cancer_analysis.ipynb
