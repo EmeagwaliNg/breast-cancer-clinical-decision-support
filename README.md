@@ -91,3 +91,9 @@ This was addressed by:
 
 ## Disclaimer
 This model is intended for **decision support only** and does not replace professional medical diagnosis.
+
+---
+
+## How to Run
+```bash
+pip install -r requirements.txt
